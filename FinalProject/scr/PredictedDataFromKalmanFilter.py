@@ -20,6 +20,13 @@ for line in csv.reader(f):
     observed_y.append(float(y_str))
 f.close()
 
+# #Find the Data Boundaries
+observed_x_min = min(observed_x)
+observed_x_max = max(observed_x)
+observed_y_min = min(observed_y)
+observed_y_max = max(observed_y)
+
+
 
 
 def kalmanXY(x, P, measurement, R,
@@ -149,14 +156,49 @@ def predictKalmanXY():
         ypos = ypos + distance_y
     '''
 
+    xpos_previous = 0
+    ypos_previous = 0
+    
+    xpos_next = 0
+    ypos_next = 0
  
-    for i in range(10):
+    for i in range(60):
         if (i == 0):
             prediction = (supported_x_arr[len(supported_x_arr)-1], supported_y_arr[len(supported_y_arr)-1])
+            xpos_previous = prediction[0]
+            ypos_previous = prediction[1]
             x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
-              
-        x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
-        prediction = ((x_p[:2]).tolist()[0][0], (x_p[:2]).tolist()[1][0])
+            xpos = (x_p[:2]).tolist()[0][0]
+            ypos = (x_p[:2]).tolist()[1][0]
+            
+        if (i >= 1):
+            xpos_previous = prediction[0]
+            ypos_previous = prediction[1]
+             
+            x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
+            
+            xpos_next = (x_p[:2]).tolist()[0][0]
+            ypos_next = (x_p[:2]).tolist()[1][0]
+    
+            distance_x = (xpos_next - xpos_previous)
+            distance_y = (ypos_next - ypos_previous)
+            
+            if ypos <= observed_y_min:
+                distance_y = (-1)*distance_y
+            if xpos >= observed_x_max:
+                distance_x = (-1)*distance_x
+            if ypos >= observed_y_max:
+                distance_y = (-1)*distance_y
+            if xpos <= observed_x_min:
+                distance_x = (-1)*distance_x
+    
+            xpos = xpos + distance_x
+            ypos = ypos + distance_y
+    
+            
+        prediction = (xpos, ypos)
+  
+        
         futurePredictedResult.append((x_p[:2]).tolist())
     predicted_x, predicted_y = zip(*futurePredictedResult)
 

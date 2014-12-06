@@ -14,9 +14,17 @@ def collectData():
     '''
     
     # Create file handle for the video file
-    cap = cv2.VideoCapture('/Users/mattking/Documents/workspace/PythonWorkspace/TrackingProject/hexbug-training_video-transcoded.mp4')
+    cap = cv2.VideoCapture('/Users/mattking/git/General/FinalProject/hexbug-training_video-transcoded.mp4')
+    
+    print "Video Properties:"
+    print "\t Width: ",cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
+    print "\t Height: ",cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
+    print "\t FourCC: ",cap.get(cv2.cv.CV_CAP_PROP_FOURCC)
+    print "\t Framerate: ",cap.get(cv2.cv.CV_CAP_PROP_FPS)
+    print "\t Number of Frames: ",cap.get(7)
+    
     # created file handle for data text file
-    fout = open('Actual_Centroid_Data.txt','w')
+    fout = open('All_Actual_Centroid_Data.txt','w')
     
     # define range of color in HSV
     hmin = (238-30)/2
@@ -35,7 +43,8 @@ def collectData():
     Start = True
     while Start:
         ctr += 1
-        print ctr
+        if ctr % 100 == 0:
+            print ctr
         if ctr == (numFramesCaptured+offset):
             Start = False
             
