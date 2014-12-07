@@ -1,15 +1,47 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+import cv2
+
 
 '''
 The file with the actual hexbug centroid data points
 is first read in and the hexbug's centroid data points
 are stored as `observed_x` and `observed_y` arrays
 '''
-f = open("Actual_Centroid_Data.txt", 'r')
+
+### Convert from cartesian to polar
+def polar(x, y, deg=0):		# radian if deg=0; degree if deg=1
+    from math import hypot, atan2, pi
+    if deg:
+        return hypot(x, y), 180.0 * atan2(y, x) / pi
+    else:
+        return hypot(x, y), atan2(y, x)
+
+        
+## Convert from polar to cartesian
+def rect(r, w, deg=0):		# radian if deg=0; degree if deg=1
+    from math import cos, sin, pi
+    if deg:
+        w = pi * w / 180.0
+    return r * cos(w), r * sin(w)
+    
+"""This maps all angles to a domain of [-pi, pi]"""   
+def angle_trunc(a):
+    from math import pi
+    while a < 0.0:
+        a += pi * 2
+    return ((a + pi) % (pi * 2)) - pi
+
+f = open("All_Actual_Centroid_Data.txt", 'r')
 observed_x = []
 observed_y = []
+
+cap = cv2.VideoCapture('hexbug-training_video-transcoded.mp4')
+    
+video_width = cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
+video_height = cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
+
 for line in csv.reader(f):
     #print line,'\t', line[0], '\t', line[1]
     line0_toString = str(line[0])
@@ -17,7 +49,7 @@ for line in csv.reader(f):
     x_str = line0_toString.strip('[')
     y_str = line1_toString.strip(']')
     observed_x.append(float(x_str))
-    observed_y.append(float(y_str))
+    observed_y.append(video_height-float(y_str))
 f.close()
 
 # #Find the Data Boundaries
@@ -26,7 +58,12 @@ observed_x_max = max(observed_x)
 observed_y_min = min(observed_y)
 observed_y_max = max(observed_y)
 
+observed_x_min = 171
+observed_x_max = 676
+observed_y_min = 59
+observed_y_max = 381
 
+print "OBSERVED:", observed_x_min,observed_x_max,observed_y_min,observed_y_max
 
 
 def kalmanXY(x, P, measurement, R,
@@ -85,6 +122,7 @@ def kalman(x, P, measurement, R, motion, Q, F, H):
 
 
 def predictKalmanXY():
+    from math import pi
     # initialize state
     x = np.matrix('0. 0. 0. 0.').T 
     P = np.matrix(np.eye(4))*1000 # initial uncertainty
@@ -156,26 +194,85 @@ def predictKalmanXY():
         ypos = ypos + distance_y
     '''
 
-    xpos_previous = 0
-    ypos_previous = 0
+    
+    ##################################################
+    #####Convert from cartesian to polar coordinates
+    
+    ##### Calculate center of circle of last turn
+    last_three_x_coordinates = (supported_x_arr[len(supported_x_arr)-1], supported_x_arr[len(supported_x_arr)-2], supported_x_arr[len(supported_x_arr)-3])
+    
+    last_three_y_coordinates = (supported_y_arr[len(supported_y_arr)-1], supported_y_arr[len(supported_y_arr)-2], supported_y_arr[len(supported_y_arr)-3])
+    
+    A = np.array([last_three_x_coordinates[0], last_three_y_coordinates[0], 0.0])
+    B = np.array([last_three_x_coordinates[1], last_three_y_coordinates[1], 0.0])
+    C = np.array([last_three_x_coordinates[2], last_three_y_coordinates[2], 0.0])
+    
+    a = np.linalg.norm(C - B)
+    b = np.linalg.norm(C - A)
+    c = np.linalg.norm(B - A)
+    
+    s = (a + b + c) / 2
+    
+    Radius = a*b*c / 4 / np.sqrt(s * (s - a) * (s - b) * (s - c))
+    
+    b1 = a*a * (b*b + c*c - a*a)
+    b2 = b*b * (a*a + c*c - b*b)
+    b3 = c*c * (a*a + b*b - c*c)
+    
+    P = np.column_stack((A, B, C)).dot(np.hstack((b1, b2, b3)))
+    P /= b1 + b2 + b3
+    
+    print "X:", last_three_x_coordinates
+    print "Y:", last_three_y_coordinates
+    print "P:", P
+    print "Radius:", Radius
+    
+    ## Calculate coordinates of last three points in relation to center of circle
+    A_turn = (A[0]-P[0],A[1]-P[1])
+    B_turn = (B[0]-P[0],B[1]-P[1])
+    C_turn = (C[0]-P[0],C[1]-P[1])
+    
+    # Finally, convert coordinates to polar
+    A_polar = polar(A_turn[0],A_turn[1])
+    B_polar = polar(B_turn[0], B_turn[1])
+    C_polar = polar(C_turn[0], C_turn[1])
+    
+    print "A polar:", A_polar
+    print "B_polar:", B_polar
+    print "C_polar:", C_polar
+    
+    x_polar = np.matrix('0. 0. 0. 0.').T 
+    x_polar[0] = A_polar[0]
+    x_polar[1] = A_polar[1]
+    x_polar[2] = A_polar[0]-B_polar[0]
+    x_polar[3] = A_polar[1]-B_polar[1]
+    ###############################
+    #####END of polar conversion###
+    
+    
+    xpos_previous = A[0] 
+    ypos_previous = A[1]
     
     xpos_next = 0
     ypos_next = 0
- 
-    for i in range(60):
+
+    
+    boundaryHit = False
+    for i in range(7):
         if (i == 0):
-            prediction = (supported_x_arr[len(supported_x_arr)-1], supported_y_arr[len(supported_y_arr)-1])
-            xpos_previous = prediction[0]
-            ypos_previous = prediction[1]
-            x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
-            xpos = (x_p[:2]).tolist()[0][0]
-            ypos = (x_p[:2]).tolist()[1][0]
+            prediction_cartesian = (A[0], A[1])
             
-        if (i >= 1):
-            xpos_previous = prediction[0]
-            ypos_previous = prediction[1]
-             
-            x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
+            #Apply Kalman filter to predict based on Polar coordinates
+            prediction_polar = (A_polar[0], A_polar[1]) 
+            x_polar, P_p = kalmanXY(x_polar, P_p, prediction_polar, R)
+
+            ## Convert to cartesian coordinates
+            ## Calculate coordinates of x_cartesian in relation to origin (0,0)
+            x_cartesian = rect(x_polar[0], x_polar[1])
+            x_cartesian = (x_cartesian[0]+P[0],x_cartesian[1]+P[1])
+          
+            x_p[0], x_p[1] = x_cartesian[0], x_cartesian[1]
+            
             
             xpos_next = (x_p[:2]).tolist()[0][0]
             ypos_next = (x_p[:2]).tolist()[1][0]
@@ -183,23 +280,94 @@ def predictKalmanXY():
             distance_x = (xpos_next - xpos_previous)
             distance_y = (ypos_next - ypos_previous)
             
-            if ypos <= observed_y_min:
+            ### Verify Whether Boundaries were hit
+            if ypos_next <= observed_y_min:
                 distance_y = (-1)*distance_y
-            if xpos >= observed_x_max:
+                boundaryHit = True
+                print i, "BOUNDARY 1"
+            if xpos_next >= observed_x_max:
                 distance_x = (-1)*distance_x
-            if ypos >= observed_y_max:
+                boundaryHit = True
+                print i, "BOUNDARY 2"
+            if ypos_next >= observed_y_max:
                 distance_y = (-1)*distance_y
-            if xpos <= observed_x_min:
+                boundaryHit = True
+                print i, "BOUNDARY 3"
+            if xpos_next <= observed_x_min:
                 distance_x = (-1)*distance_x
+                boundaryHit = True
+                print i, "BOUNDARY 4"
+            
+            print "BEFORE: xpos_next, ypos_next, distance_X, distance_y", xpos_next, ypos_next, distance_x, distance_y
+            xpos_next = xpos_previous + distance_x
+            ypos_next = ypos_previous + distance_y
+            print "AFTER: xpos_next, ypos_next, distance_X, distance_y", xpos_next, ypos_next, distance_x, distance_y
+         
+            x_p = np.matrix([[xpos_next, ypos_next, distance_x, distance_y]]).T 
+
+            
+            
+        if (i >= 1):
+            if boundaryHit == True:
+                x_p, P_p = kalmanXY(x_p, P_p, prediction_cartesian, R)
+            else:
+                x_polar, P_p = kalmanXY(x_polar, P_p, prediction_polar, R)
+                
+                ## Account for differences in angle accross the pi line.
+                if x_polar[1] > pi:
+                    x_polar[1] = x_polar[1] - 2*pi
+                
+                ## Convert new x_polar into cartesian coordinates
+                x_cartesian = rect(x_polar[0], x_polar[1])
+                x_cartesian = (x_cartesian[0]+P[0],x_cartesian[1]+P[1])
+
+                x_p[0], x_p[1] = x_cartesian[0], x_cartesian[1]
+                
+                
+            xpos_previous = prediction_cartesian[0]
+            ypos_previous = prediction_cartesian[1]
+             
+            
+            xpos_next = (x_p[:2]).tolist()[0][0]
+            ypos_next = (x_p[:2]).tolist()[1][0]
     
-            xpos = xpos + distance_x
-            ypos = ypos + distance_y
+            distance_x = (xpos_next - xpos_previous)
+            distance_y = (ypos_next - ypos_previous)
+            
+            boundaryHit = False
+            if ypos_next <= observed_y_min:
+                distance_y = (-1)*distance_y
+                print i, "BOUNDARY 1"
+                boundaryHit = True
+            if xpos_next >= observed_x_max:
+                distance_x = (-1)*distance_x
+                print i, "BOUNDARY 2"
+                boundaryHit = True
+            if ypos_next >= observed_y_max:
+                distance_y = (-1)*distance_y
+                print i, "BOUNDARY 3"
+                boundaryHit = True
+            if xpos_next <= observed_x_min:
+                distance_x = (-1)*distance_x
+                print i, "BOUNDARY 4"
+                boundaryHit = True
+            
+            print "BEFORE: xpos_next, ypos_next, distance_X, distance_y", xpos_next, ypos_next, distance_x, distance_y
+            xpos_next = xpos_previous + distance_x
+            ypos_next = ypos_previous + distance_y
+            print "AFTER: xpos_next, ypos_next, distance_X, distance_y", xpos_next, ypos_next, distance_x, distance_y
     
             
-        prediction = (xpos, ypos)
-  
+        prediction_cartesian = (xpos_next, ypos_next)
         
+        ## Calculate coordinates of prediction in relation to center of circle previously calculated.
+        ## and convert to polar    
+        prediction_circle = (prediction_cartesian[0]-P[0],prediction_cartesian[1]-P[1])   
+        prediction_polar = polar(prediction_circle[0],prediction_circle[1])
+
         futurePredictedResult.append((x_p[:2]).tolist())
+        
+        
     predicted_x, predicted_y = zip(*futurePredictedResult)
 
       
@@ -215,7 +383,6 @@ def predictKalmanXY():
 
 
 predictKalmanXY()
-
 
 
 
