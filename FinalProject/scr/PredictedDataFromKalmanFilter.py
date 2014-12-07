@@ -2,32 +2,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
-'''
-The file with the actual hexbug centroid data points
-is first read in and the hexbug's centroid data points
-are stored as `observed_x` and `observed_y` arrays
-'''
-f = open("Actual_Centroid_Data.txt", 'r')
 observed_x = []
 observed_y = []
-for line in csv.reader(f):
-    #print line,'\t', line[0], '\t', line[1]
-    line0_toString = str(line[0])
-    line1_toString = str(line[1])
-    x_str = line0_toString.strip('[')
-    y_str = line1_toString.strip(']')
-    observed_x.append(float(x_str))
-    observed_y.append(float(y_str))
-f.close()
 
-# #Find the Data Boundaries
-observed_x_min = min(observed_x)
-observed_x_max = max(observed_x)
-observed_y_min = min(observed_y)
-observed_y_max = max(observed_y)
+#Find the Data Boundaries
+observed_x_min = 0
+observed_x_max = 0
+observed_y_min = 0
+observed_y_max = 0
+
+supported_x_arr = []
+supported_y_arr = []
+
+predicted_x_arr = []
+predicted_y_arr = []
 
 
+# initialize for the position prediction with actual data available
+# initialize arrays for position prediction beyond actual data
+supportedPredictedResult = []
+futurePredictedResult = []
 
+
+start = 10
+end = 1450
+
+pastPoints = 10
 
 def kalmanXY(x, P, measurement, R,
               motion = np.matrix('0. 0. 0. 0.').T,
@@ -84,25 +84,19 @@ def kalman(x, P, measurement, R, motion, Q, F, H):
     return x, P
 
 
+
 def predictKalmanXY():
     # initialize state
     x = np.matrix('0. 0. 0. 0.').T 
     P = np.matrix(np.eye(4))*1000 # initial uncertainty
     
-  
-    # plotting the actual observed data
-    plt.plot(observed_x, observed_y, 'go')
-    
-    # initialize for the position prediction with actual data available
-    # initialize arrays for position prediction beyond actual data
-    supportedPredictedResult = []
-    futurePredictedResult = []
-    
     # noise figure
     R = 0.01**2
     
     ctr = 0
-    for meas in zip(observed_x, observed_y):
+    
+    
+    for meas in zip(observed_x[start:end], observed_y[start:end]):
         # calling the Kalman filter algorithm on the actual
         # observed data to generate predictions.
         x, P = kalmanXY(x, P, meas, R)
@@ -114,48 +108,13 @@ def predictKalmanXY():
      
     
     supported_x, supported_y = zip(*supportedPredictedResult)
-    plt.plot(supported_x, supported_y, 'b-')
-    supported_x_arr = []
-    supported_y_arr = []
     for i in range(len(supported_x)):
         supported_x_arr.append(supported_x[i][0])
         supported_y_arr.append(supported_y[i][0])
     
     x_p = x
     P_p = P
-    '''
-    TODO:
-    Use the previous x and P for the predicting stage
-    Fix the formatting of the previousPredictedResult 
-    Get the plot to show all of the actual positions, the filter positions and the predicted future positions
-    Make sure that the future positions begin to take place after the actual positions run out
-    Make sure to add the boundary conditions to prevent the prediction to go out of bounds
-    Clean up and refactor code
-    '''
-    '''
-    # #Find the Data Boundaries
-    x_min = min(x)/3
-    x_max = max(x)/3
-    y_min = min(y)/3
-    y_max = max(y)/3
-    distance_x = (x[2] - x[1])/3
-    distance_y = (x[2] - x[1])/3
-    for i in range(2000):
-        #hexbug.hideturtle()
-        #hexbug.penup()
-        if ypos <= y_min:
-            distance_y = (-1)*distance_y
-        if xpos >= x_max:
-            distance_x = (-1)*distance_x
-        if ypos >= y_max:
-            distance_y = (-1)*distance_y
-        if xpos <= x_min:
-            distance_x = (-1)*distance_x
-
-        xpos = xpos + distance_x
-        ypos = ypos + distance_y
-    '''
-
+    
     xpos_previous = 0
     ypos_previous = 0
     
@@ -164,10 +123,13 @@ def predictKalmanXY():
  
     for i in range(60):
         if (i == 0):
-            prediction = (supported_x_arr[len(supported_x_arr)-1], supported_y_arr[len(supported_y_arr)-1])
+            prediction = (supported_x_arr[len(supported_x) - 1], supported_y_arr[len(supported_y) - 1])
+            
             xpos_previous = prediction[0]
             ypos_previous = prediction[1]
+            
             x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
+
             xpos = (x_p[:2]).tolist()[0][0]
             ypos = (x_p[:2]).tolist()[1][0]
             
@@ -177,46 +139,84 @@ def predictKalmanXY():
              
             x_p, P_p = kalmanXY(x_p, P_p, prediction, R)
             
-            xpos_next = (x_p[:2]).tolist()[0][0]
-            ypos_next = (x_p[:2]).tolist()[1][0]
-    
-            distance_x = (xpos_next - xpos_previous)
-            distance_y = (ypos_next - ypos_previous)
+            xpos = (x_p[:2]).tolist()[0][0]
+            ypos = (x_p[:2]).tolist()[1][0]
             
-            if ypos <= observed_y_min:
-                distance_y = (-1)*distance_y
-            if xpos >= observed_x_max:
-                distance_x = (-1)*distance_x
-            if ypos >= observed_y_max:
-                distance_y = (-1)*distance_y
-            if xpos <= observed_x_min:
-                distance_x = (-1)*distance_x
-    
-            xpos = xpos + distance_x
-            ypos = ypos + distance_y
+#             xpos_next = (x_p[:2]).tolist()[0][0]
+#             ypos_next = (x_p[:2]).tolist()[1][0]
+#     
+#             distance_x = (xpos_next - xpos_previous)
+#             distance_y = (ypos_next - ypos_previous)
+#             
+#             if ypos <= observed_y_min:
+#                 distance_y = (-1)*distance_y
+#             if xpos >= observed_x_max:
+#                 distance_x = (-1)*distance_x
+#             if ypos >= observed_y_max:
+#                 distance_y = (-1)*distance_y
+#             if xpos <= observed_x_min:
+#                 distance_x = (-1)*distance_x
+#     
+#             xpos = xpos + distance_x
+#             ypos = ypos + distance_y
     
             
         prediction = (xpos, ypos)
-  
-        
         futurePredictedResult.append((x_p[:2]).tolist())
+        
+        
     predicted_x, predicted_y = zip(*futurePredictedResult)
+    for i in range(len(predicted_x)):
+        predicted_x_arr.append(predicted_x[i][0])
+        predicted_y_arr.append(predicted_y[i][0])
 
-      
-    # The predicted data point generated by the Kalman filter
-    # are written to a file
-#     fout = open('Predicted_Centroid_Data.txt','w')
-#     for i in range(len(kalman_x)):
-#         fout.write(str(kalman_x[i][0]) + ', ' + str(kalman_y[i][0]) + '\n')
-#     fout.close()
-    
-    plt.plot(predicted_x, predicted_y, 'r-')
+
+
+def plotResults():
+    # plotting the results
+    plt.plot(observed_x[end + 2 - pastPoints:end + 60], observed_y[end + 2 - pastPoints:end + 60], 'g-o', label = 'Actual')
+    plt.plot(observed_x[end+1], observed_y[end + 1], 'yo', label = 'Start')
+    plt.plot(supported_x_arr[end-96 - pastPoints:], supported_y_arr[end-96-pastPoints:], 'b-o', label = 'Supported')
+    plt.plot(predicted_x_arr, predicted_y_arr, 'r-o', label = 'Future')
+    plt.plot(predicted_x_arr[0], predicted_y_arr[0], 'k-o', label = 'FutureStart')
+    plt.legend( bbox_to_anchor=(0.5, 1.12), loc='upper center',  ncol = 5)
     plt.show()
 
 
-predictKalmanXY()
+def readInFile():
+    
+    '''
+    The file with the actual hexbug centroid data points
+    is first read in and the hexbug's centroid data points
+    are stored as `observed_x` and `observed_y` arrays
+    '''
+    f = open("Actual_Centroid_Data.txt", 'r')
+    
+    for line in csv.reader(f):
+        #print line,'\t', line[0], '\t', line[1]
+        line0_toString = str(line[0])
+        line1_toString = str(line[1])
+        x_str = line0_toString.strip('[')
+        y_str = line1_toString.strip(']')
+        observed_x.append(float(x_str))
+        observed_y.append(float(y_str))
+    f.close()
+    
+    # #Find the Data Boundaries
+    observed_x_min = min(observed_x)
+    observed_x_max = max(observed_x)
+    observed_y_min = min(observed_y)
+    observed_y_max = max(observed_y)
 
+def writeToFile():
+    # The predicted data point generated by the Kalman filter
+    # are written to a file
+    fout = open('Predicted_Centroid_Data.txt','w')
+    for i in range(len(predicted_x_arr)):
+        fout.write(str(predicted_x_arr[i]) + ', ' + str(predicted_y_arr[i]) + '\n')
+    fout.close()
+    
 
-
-
-
+readInFile()
+predictKalmanXY()  
+plotResults() 
