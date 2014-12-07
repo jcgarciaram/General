@@ -14,7 +14,7 @@ def collectData():
     '''
     
     # Create file handle for the video file
-    cap = cv2.VideoCapture('/Users/mattking/git/General/FinalProject/hexbug-training_video-transcoded.mp4')
+    cap = cv2.VideoCapture('hexbug-training_video-transcoded.mp4')
     
     print "Video Properties:"
     print "\t Width: ",cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
@@ -39,7 +39,7 @@ def collectData():
     
     ctr = 0
     offset = 10
-    numFramesCaptured = 20000
+    numFramesCaptured = 50
     Start = True
     while Start:
         ctr += 1
