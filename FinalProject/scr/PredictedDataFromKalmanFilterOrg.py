@@ -46,15 +46,15 @@ cap = cv2.VideoCapture('/FinalProject/hexbug-training_video-transcoded.mp4')
 video_width = cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
 video_height = cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
 
-for line in csv.reader(f):
-    #print line,'\t', line[0], '\t', line[1]
-    line0_toString = str(line[0])
-    line1_toString = str(line[1])
-    x_str = line0_toString.strip('[')
-    y_str = line1_toString.strip(']')
-    observed_x.append(float(x_str))
-    observed_y.append(video_height-float(y_str))
-f.close()
+# for line in csv.reader(f):
+#     #print line,'\t', line[0], '\t', line[1]
+#     line0_toString = str(line[0])
+#     line1_toString = str(line[1])
+#     x_str = line0_toString.strip('[')
+#     y_str = line1_toString.strip(']')
+#     observed_x.append(float(x_str))
+#     observed_y.append(video_height-float(y_str))
+# f.close()
 
 
 #Find the Data Boundaries
@@ -74,6 +74,11 @@ observed_x_max = 676
 observed_y_min = 59
 observed_y_max = 381
 
+
+# observed_x_min = min(observed_x)
+# observed_x_max = max(observed_x)
+# observed_y_min = min(observed_y)
+# observed_y_max = max(observed_y)
 
 # initialize for the position prediction with actual data available
 # initialize arrays for position prediction beyond actual data
