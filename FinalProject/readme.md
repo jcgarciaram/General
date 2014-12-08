@@ -13,9 +13,14 @@ This program can use actual data that has already be collected in the `testing_v
 ###Working with a List of Data
 
 
-The first step to run the program is to process the collected data and generate the predicted data by running the module `PredictedDataFromKalmanFilter.py`. This module takes `Actual_Centroid_Data.txt` as an input and then uses the Kalman filter algorithm to calculate the predicted data. Once this module has run, the file `Predicted_Centroid_Data.txt` will be created in the dir, and a `python matplot` will show a snap shot comparing the actual and predicted data points.
+The first step to run the program is to process the collected data and generate the predicted data by running the module `PredictedDataFromKalmanFilter.py`. This module takes the file name as an argument in the following manner:
+<pre><code>
+python PredictedDataFromKalmanFilter.py FileName
+</code></pre>
 
-The final step and optional step to run the program is to compare the actual and predicted data by running the module `ComparingActualAndPredicted.py`. This module takes both `Actual_Centroid_Data.txt` and `Predicted_Centroid_Data.txt` as inputs and uses the data points to drive an animation to visualize the actual turtle(green circle) and predict turtle(red circle) sequentially. The L<sup>2</sup> error is printed in the console as the module is running. 
+where FileName is the name of the file containing the observed data points. It then uses the Kalman filter algorithm to calculate the predicted data. Once this module has run, the file `PredictedDataFromKalmanFilter.py` will be created in the dir, and a `python matplot` will show a snap shot comparing the actual and predicted data points.
+
+The final step and optional step to run the program is to compare the actual and predicted data by running the module `ComparingActualAndPredicted.py`. This module takes both `Actual_Centroid_Data.txt` and `Predicted_Centroid_Data.txt` as inputs and uses the data points to drive an animation to visualize the actual turtle(green circle) and predict turtle(red circle) sequentially. The L<sup>2</sup> error is printed in the console as the module is running.
 
 ##Algorithm Overview
 
@@ -57,15 +62,28 @@ The Kalman filter is instrumental in predicting the next position after each act
 
 ##Describe Source Code and Program Functionality
 
-In the module `PredictedDataFromKalmanFilter.py`, the file `Actual_Centroid_Data.txt` is first read, and the positions of hexbug's centroid are stored in the `observed_x` and `observed_y` arrays. The module contains three main functions called `kalmanXY()`, `kalman()`, and `predictKalmanXY()`. The `kalman()` function is where the Kalman filter algorithm is implemented. The `kalmanXY()` function works as a helper function by calling the `kalman()` function that setups the **F** (next state function) and **H** (measurement function) matrices. The **F** and **H** matrices have been defined specifically for the state vector used by the Kalman filter. The `predictKalmanXY()` function is where the list of actual position data points, `observed_x` and `observed_y`, are used by the Kalman filter algorithm to generate the predicted data points, `supported_x` and `supported_y`, and store them in the `Predicted_Centroid_Data.txt` file. After all of the predicted data points are generated, `python matplot` will display a snap shot comparing the actual and predicted data point.
+In the module `PredictedDataFromKalmanFilter.py`, the file given as an input is first read, and the positions of hexbug's centroid are stored in the `observed_x` and `observed_y` arrays. The module contains three functions called `kalmanXY()`, `kalman()`, and `predictKalmanXY()`. The `kalman()` function is where the Kalman filter algorithm is implemented. The `kalmanXY()` function works as a helper function by calling the `kalman()` function that setups the **F** (next state function) and **H** (measurement function) matrices. The **F** and **H** matrices have been defined specifically for the state vector used by the Kalman filter. The `predictKalmanXY()` function is where the list of actual position data points, `observed_x` and `observed_y`, are used by the Kalman filter algorithm to generate the predicted data points, `predicted_x_arr` and `predicted_y_arr`, and store them in the `Predicted_Centroid_Data.txt` file.
 
-In the module `ComparingActualAndPredicted.py`, the actual and predicted hexbug positions are displayed in an animation using the `python turtle` library. The `Actual_Centroid_Data.txt` and `Predicted_Centroid_Data.txt` files are first read and stored as arrays. The hexbug's actual centroid data is stored as `x` and `y` arrays, and the predicted data points are stored as `x_predict` and `y_predict`. The module contains one function call `displayActualAndPredicted()`. This function is for the visualization of the actual and predicted position data points as an animation. The animation screen is setup. The turtles for the actual and predicted position visualizations are initialized. Then the actual and predicted data points are iterated and used to update the animation with the sequential position. During the iteration of the actual and predicted data points, the L<sup>2</sup> error is calculated and is printed in the console and updated as the animation is running. 
+In order to predict the future data points the algorithm follows the following steps:
+<ol>
 
+<li>Calculate the average turning radius of all three consecutive points in the observed arrays. This is done by creating a circle with the three data points used as three points in the circle, and later calculating the radius of the circle.
 
+<li>Once the average radius is calculated, calculate final turning radius of the observed data points using the last three data points captured. Using geometric functions, we then convert this circle into another circle with the avg radius that was calculated beforehand. However, the original direction of turning is kept by making the two circles be internally tangent.
 
+<li>Because we now know the radius of the circle and the position of the last observed points in it, we can convert the points from cartesian coordinates to polar coordinates.
 
+<li>A initial state vector with polar coordinates is then created with the polar points calculated: `x_polar`.
 
+<li>The Kalman filter function is called using the polar state vector which then returns a prediction which follows the circle of average radius calculated. If the prediction falls outside the boundaries of the observable region, the direction of movement is then swapped so as to create the effect of the hexbug "bouncing" against the wall.
 
+<li>The polar coordinates returned by the Kalman filter are later converted into cartesian coordinates and placed in the `predicted_x_arr` and `predicted_y_arr`.
 
+<li>This process is repeated using the latest polar prediction as the current state vector.
 
+<li> Once 60 points have been calculated, the predicted data points are written to the `Predicted_Centroid_Data.txt` file.
+</ol>
 
+After all of the predicted data points are generated, `python matplot` will display a snap shot comparing the actual and predicted data point.
+
+In the module `ComparingActualAndPredicted.py`, the actual and predicted hexbug positions are displayed in an animation using the `python turtle` library. The `Actual_Centroid_Data.txt` and `Predicted_Centroid_Data.txt` files are first read and stored as arrays. The hexbug's actual centroid data is stored as `x` and `y` arrays, and the predicted data points are stored as `x_predict` and `y_predict`. The module contains one function call `displayActualAndPredicted()`. This function is for the visualization of the actual and predicted position data points as an animation. The animation screen is setup. The turtles for the actual and predicted position visualizations are initialized. Then the actual and predicted data points are iterated and used to update the animation with the sequential position. During the iteration of the actual and predicted data points, the L<sup>2</sup> error is calculated and is printed in the console and updated as the animation is running.
