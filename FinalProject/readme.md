@@ -18,9 +18,14 @@ The first step to run the program is to process the collected data and generate 
 python PredictedDataFromKalmanFilter.py FileName
 </code></pre>
 
-where FileName is the name of the file containing the observed data points. It then uses the Kalman filter algorithm to calculate the predicted data. Once this module has run, the file `PredictedDataFromKalmanFilter.py` will be created in the dir, and a `python matplot` will show a snap shot comparing the actual and predicted data points.
+where FileName is the name of the file containing the observed data points. It then uses the Kalman filter algorithm to calculate the predicted data. Once this module has run, the file `PredictedDataFromKalmanFilter.py` will be created in the dir, and a `python matplot` will show a snap shot of the last observed data points and the 60 predicted data points. By default the plotting function is commented in the main function of `PredictedDataFromKalmanFilter.py`.
 
-The final step and optional step to run the program is to compare the actual and predicted data by running the module `ComparingActualAndPredicted.py`. This module takes both `Actual_Centroid_Data.txt` and `Predicted_Centroid_Data.txt` as inputs and uses the data points to drive an animation to visualize the actual turtle(green circle) and predict turtle(red circle) sequentially. The L<sup>2</sup> error is printed in the console as the module is running.
+The final step and optional step to run the program is to compare the actual and predicted data by running the module `ComparingActualAndPredicted.py`. This module takes as an argument the actual data points. It then compares them against the points in the `Predicted_Centroid_Data.txt` and uses the data points to drive an animation to visualize the actual turtle(green circle) and predict turtle(red circle) sequentially. The L<sup>2</sup> error is printed in the console as the module is running. This module is run in the following manner:
+<pre><code>
+python ComparingActualAndPredicted.py FileName
+</code></pre>
+
+where FileName is a text file containing the actual data points.
 
 ##Algorithm Overview
 
@@ -86,4 +91,4 @@ In order to predict the future data points the algorithm follows the following s
 
 After all of the predicted data points are generated, `python matplot` will display a snap shot comparing the actual and predicted data point.
 
-In the module `ComparingActualAndPredicted.py`, the actual and predicted hexbug positions are displayed in an animation using the `python turtle` library. The `Actual_Centroid_Data.txt` and `Predicted_Centroid_Data.txt` files are first read and stored as arrays. The hexbug's actual centroid data is stored as `x` and `y` arrays, and the predicted data points are stored as `x_predict` and `y_predict`. The module contains one function call `displayActualAndPredicted()`. This function is for the visualization of the actual and predicted position data points as an animation. The animation screen is setup. The turtles for the actual and predicted position visualizations are initialized. Then the actual and predicted data points are iterated and used to update the animation with the sequential position. During the iteration of the actual and predicted data points, the L<sup>2</sup> error is calculated and is printed in the console and updated as the animation is running.
+In the module `ComparingActualAndPredicted.py`, the actual and predicted hexbug positions are displayed in an animation using the `python turtle` library. A text file comtaining the actual data points is input as an argument. The actual data pints and the predicted data points stored in `Predicted_Centroid_Data.txt` file are first read and stored as arrays. The hexbug's actual centroid data is stored as `x` and `y` arrays, and the predicted data points are stored as `x_predict` and `y_predict`. The module contains one function call `displayActualAndPredicted()`. This function is for the visualization of the actual and predicted position data points as an animation. The animation screen is setup. The turtles for the actual and predicted position visualizations are initialized. Then the actual and predicted data points are iterated and used to update the animation with the sequential position. During the iteration of the actual and predicted data points, the L<sup>2</sup> error is calculated and is printed in the console and updated as the animation is running.
